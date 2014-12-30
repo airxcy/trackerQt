@@ -30,7 +30,6 @@ SOURCES += \
     src/trackers/klt_c/writeFeatures.cpp \
     src/trackers/buffers.cpp \
     src/trackers/klttracker.cpp \
-    src/trackers/mytrackerKLT.cpp \
     src/trackers/utils.cpp
 
 HEADERS  += \
@@ -49,7 +48,6 @@ HEADERS  += \
     includes/trackers/klt_c/trk.h \
     includes/trackers/buffers.h \
     includes/trackers/klttracker.h \
-    includes/trackers/mytracker.h \
     includes/trackers/tracker.h \
     includes/trackers/utils.h
 

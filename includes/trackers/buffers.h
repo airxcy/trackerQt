@@ -4,7 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 typedef unsigned char BYTE;
-
+typedef float REAL;
+typedef int PntT;
 template <typename ELEM_T> class Buff
 {
 public:
@@ -54,8 +55,8 @@ public:
 };
 
 typedef struct {
-	int x;
-	int y;
+    PntT x;
+    PntT y;
 	int t;
 } TrkPts, *TrkPts_p;
 

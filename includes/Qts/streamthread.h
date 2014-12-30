@@ -15,17 +15,20 @@ public:
     void streaming();
     void updateItems();
 public:
+    std::string vidfname,gtdir, gtbasedir, vidid;
     char strbuff[100];
     unsigned char * frameptr;
-    int framewidth,frameheight,frameidx,frameByteSize;
+    unsigned char * darkerPtr;
+    int framewidth,frameheight,frameidx,frameByteSize,gtframeidx;
     QMutex mutex;
     QWaitCondition drawcv;
 
     //tracking items
-    int nFeatures;
+    int nFeatures,gt_N;
     std::vector<TrackBuff> trackBuff;
+    Buff<REAL> targetLoc,targetBB;
 public slots:
-    void streamStart();
+    void streamStart(string &filename);
     bool init();
 signals:
     void aFrameDone();

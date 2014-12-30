@@ -5,7 +5,7 @@
 #include "trackers/klt_c/klt.h"
 #include "trackers/klt_c/pnmio.h"
 #include "trackers/klt_c/trk.h"
-#include <math.h>
+#include <cmath>
 #include <fstream>
 #include <string>
 
@@ -14,9 +14,10 @@ using namespace cv;
 
 using namespace std;
 
+#define PI 3.14159265
+#define dirN 8
 
-
-class KLTtracker : public tracker
+class KLTtracker : public Tracker
 {
 public:
 	KLT_TrackingContext tc;
@@ -36,14 +37,16 @@ public:
 
 	std::vector<TrackBuff> trackBuff;
 	TrkPts pttmp;
-	Buff<int> targetLoc,targetBB;
+    Buff<REAL> targetLoc,targetBB;
+    unsigned char* bbxft;
 	int bbw, bbh;
 
 	int init(int bsize,int w,int h);
 	int selfinit(unsigned char* framedata);
 	int initBG(int mode,unsigned char* bgptr=NULL);
 	int initGT(string & gtfilename);
-	int updateAframe(unsigned char* framedata);
+    int updateAframe(unsigned char* framedata,int fidx);
+    void updateBB();
 	void updateFGMask(unsigned char* bgptr);
 	
 	int checkFG(int x,int y);

@@ -9,13 +9,13 @@ MainWindow::MainWindow()
     defaultscene = new DefaultScene(0, 0, 440, 240);
     gview = new GraphicsView(defaultscene,this);
 
-    defaultscene->setBackgroundBrush(QImage("images/default.png"));
+    defaultscene->setBackgroundBrush(QImage(":/images/default.png"));
     gview->setFixedSize(defaultscene->width()+2,defaultscene->height()+2);
     //gview->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     //gview->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     gview->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     setMinimumSize(gview->width()+10,gview->height()+20);
-    setWindowFlags(Qt::FramelessWindowHint);
+    //setWindowFlags(Qt::FramelessWindowHint);
     setStyleSheet("QWidget { background-color: rgb(0, 0, 0); }");
     streamThd = new StreamThread(this);
     makeConns();
@@ -34,7 +34,9 @@ void MainWindow::resizeEvent(QResizeEvent * evt)
 void MainWindow::gviewClicked(QGraphicsSceneMouseEvent * event)
 {
     //QMessageBox::question(NULL, "Test", "msg",QMessageBox::Ok);
-    streamThd->streamStart();
+    //QString fileName = QFileDialog::getOpenFileName(this,tr("Open vid"), "/", tr("Vid Files (*.avi *.mp4 *.mkv)"));
+    QString fileName="C:/Users/xcy/Documents/CVProject/data/label_company/200412.avi";
+    streamThd->streamStart(fileName.toStdString());
 }
 
 void MainWindow::initUI()

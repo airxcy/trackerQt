@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_StreamThread_t {
-    QByteArrayData data[9];
-    char stringdata[72];
+    QByteArrayData data[11];
+    char stringdata[89];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -37,12 +37,14 @@ QT_MOC_LITERAL(4, 31, 11), // "const char*"
 QT_MOC_LITERAL(5, 43, 3), // "msg"
 QT_MOC_LITERAL(6, 47, 7), // "initSig"
 QT_MOC_LITERAL(7, 55, 11), // "streamStart"
-QT_MOC_LITERAL(8, 67, 4) // "init"
+QT_MOC_LITERAL(8, 67, 7), // "string&"
+QT_MOC_LITERAL(9, 75, 8), // "filename"
+QT_MOC_LITERAL(10, 84, 4) // "init"
 
     },
     "StreamThread\0aFrameDone\0\0debug\0"
     "const char*\0msg\0initSig\0streamStart\0"
-    "init"
+    "string&\0filename\0init"
 };
 #undef QT_MOC_LITERAL
 
@@ -65,8 +67,8 @@ static const uint qt_meta_data_StreamThread[] = {
        6,    0,   43,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-       7,    0,   44,    2, 0x0a /* Public */,
-       8,    0,   45,    2, 0x0a /* Public */,
+       7,    1,   44,    2, 0x0a /* Public */,
+      10,    0,   47,    2, 0x0a /* Public */,
 
  // signals: parameters
     QMetaType::Void,
@@ -74,7 +76,7 @@ static const uint qt_meta_data_StreamThread[] = {
     QMetaType::Void,
 
  // slots: parameters
-    QMetaType::Void,
+    QMetaType::Void, 0x80000000 | 8,    9,
     QMetaType::Bool,
 
        0        // eod
@@ -88,7 +90,7 @@ void StreamThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
         case 0: _t->aFrameDone(); break;
         case 1: _t->debug((*reinterpret_cast< const char*(*)>(_a[1]))); break;
         case 2: _t->initSig(); break;
-        case 3: _t->streamStart(); break;
+        case 3: _t->streamStart((*reinterpret_cast< string(*)>(_a[1]))); break;
         case 4: { bool _r = _t->init();
             if (_a[0]) *reinterpret_cast< bool*>(_a[0]) = _r; }  break;
         default: ;
