@@ -7,8 +7,8 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-void KLTError(char *fmt, ...);
-void KLTWarning(char *fmt, ...);
+void KLTError(const char *fmt, ...);
+void KLTWarning(const char *fmt, ...);
 
 #endif
 

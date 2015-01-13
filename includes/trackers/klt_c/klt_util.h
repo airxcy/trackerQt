@@ -25,7 +25,7 @@ void _KLTPrintSubFloatImage(
 
 void _KLTWriteFloatImageToPGM(
   _KLT_FloatImage img,
-  char *filename);
+  const char *filename);
 
 /* for affine mapping */
 void _KLTWriteAbsFloatImageToPGM(

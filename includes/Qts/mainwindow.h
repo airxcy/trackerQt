@@ -6,8 +6,11 @@
 #include <QMainWindow>
 #include <QWidget>
 #include <QGraphicsView>
-#include "streamthread.h"
-#include "viewqt.h"
+#include <QLayout>
+class StreamThread;
+class TrkScene;
+class GraphicsView;
+class RefScene;
 class DefaultScene : public QGraphicsScene
 {
     Q_OBJECT
@@ -25,18 +28,7 @@ public:
 signals:
     void clicked(QGraphicsSceneMouseEvent * event);
 };
-class GraphicsView : public QGraphicsView
-{
-    Q_OBJECT
-public:
-    GraphicsView(QGraphicsScene *scene) : QGraphicsView(scene)
-    {
-    }
-    GraphicsView(QGraphicsScene *scene, QWidget * parent = 0) : QGraphicsView(scene,parent)
-    {
-    }
-    virtual void resizeEvent(QResizeEvent *) Q_DECL_OVERRIDE;
-};
+
 
 //! [0]
 class MainWindow : public QMainWindow
@@ -47,11 +39,16 @@ public:
     MainWindow();
 
     StreamThread* streamThd;
+    QWidget* cWidget;
     TrkScene* trkscene;
+    RefScene* refscene;
     GraphicsView* gview;
+    GraphicsView* refview;
+    QGraphicsScene * ascene;
     DefaultScene* defaultscene;
-    virtual void resizeEvent(QResizeEvent *) Q_DECL_OVERRIDE;
-
+    QBoxLayout* layout;
+    //virtual void resizeEvent(QResizeEvent *) Q_DECL_OVERRIDE;
+    void setupLayout();
     void makeConns();
 public slots:
     void gviewClicked(QGraphicsSceneMouseEvent * event);

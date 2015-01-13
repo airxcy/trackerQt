@@ -156,7 +156,7 @@ static void _printInteger(
 
 static KLT_BOOL _isCharInString(
   char c,
-  char *str)
+  const char *str)
 {
   int width = strlen(str);
   int i;

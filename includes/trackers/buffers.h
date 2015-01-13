@@ -63,5 +63,23 @@ typedef struct {
 class TrackBuff : public Buff<TrkPts>
 {
 public:
+    TrackBuff():Buff(){isCurved=false;}
+    bool isCurved;
+    void clone(TrackBuff* target);
+    void clear();
 };
+
+template <typename ELEM_T> class Map3D
+{
+public:
+    ELEM_T* data;
+    int e_byte_size,e_step,width,height;
+    Map3D();
+    Map3D(int h,int w,int step);
+
+    ELEM_T& operator()(int i,int j,int k);
+
+};
+
+
 #endif

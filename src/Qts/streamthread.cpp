@@ -1,14 +1,17 @@
-#include "Qts/StreamThread.h"
-#include <QMessageBox>
-#include <iostream>
+#include "Qts/streamthread.h"
+#include "trackers/klttracker.h"
+#include "Qts/viewqt.h"
+#include "Qts/modelsqt.h"
 
-#include <opencv2/opencv.hpp>
+#include <iostream>
 #include <fstream>
 #include <time.h>
+
+#include <opencv2/opencv.hpp>
+#include <QMessageBox>
 using namespace cv;
 
 VideoCapture cap;
-KLTtracker* tracker;
 Mat frame,gray,darker;
 clock_t t;
 float fps=0;
@@ -16,6 +19,10 @@ StreamThread::StreamThread(QObject *parent) : QThread(parent)
 {
     restart = false;
     abort = false;
+    pause = false;
+    gt_N=-1;
+    gtInited=false;
+    trkscene=NULL;
 }
 StreamThread::~StreamThread()
 {
@@ -65,7 +72,7 @@ bool StreamThread::init()
     gtbasedir="C:/Users/xcy/Documents/CVProject/data/label_company/labels/";
     vidid=vidfname.substr(vidfname.length() - 10, 6);
     gtdir = gtbasedir + vidid + "txt/";
-
+    bbxft=NULL;
     return cap.isOpened();
 }
 void StreamThread::updateItems()
@@ -85,10 +92,21 @@ void StreamThread::updateItems()
             tracker->trackBuff[i].clear();
         }
     }
-    for(int i=0;i<gt_N;i++)
+    if(tracker->gt_inited&&bbxft!=NULL)
+        memcpy(bbxft,tracker->bbxft,gt_N*nFeatures*sizeof(unsigned char));
+    if(gt_N>0)
     {
         tracker->targetLoc.clone(&targetLoc);
         tracker->targetBB.clone(&targetBB);
+        if(trkscene!=NULL&&trkscene->bbvec.size()>0)
+        {
+            REAL* bb=targetBB.cur_frame_ptr;
+            for(int bb_i=0;bb_i<gt_N;bb_i++)
+            {
+                REAL l=bb[bb_i*4+0],t=bb[bb_i*4+1],r=bb[bb_i*4+2],b=bb[bb_i*4+3];
+                trkscene->bbvec[bb_i]->updateVtx(l,t,r,b);
+            }
+        }
     }
     mutex.unlock();
 }
@@ -109,24 +127,41 @@ void StreamThread::streaming()
                         break;
                 if (abort)
                         return;
+                while(pause);
                 frameidx++;
                 if ((frameidx - 50) % 1500 == 0)
                 {
-
+                    mutex.lock();
                     sprintf(strbuff, "%06d.txt\0", frameidx);
                     std::string gtfname = gtdir + strbuff;
                     tracker->initGT(gtfname);
                     gt_N=tracker->gt_N;
                     targetLoc.init( tracker->targetLoc.frame_step_size,tracker->targetLoc.buff_len);
                     targetBB.init(tracker->targetBB.frame_step_size,tracker->targetBB.buff_len);
+                    bbxft=new unsigned char[gt_N*nFeatures];
                     tracker->targetLoc.clone(&targetLoc);
                     tracker->targetBB.clone(&targetBB);
+                    gtInited=true;
+                    mutex.unlock();
+                    std::cout <<"mutex end"<<std::endl;
+                    emit initBBox();
+                    std::cout <<"siged"<<std::endl;
                 }
+
                 cap >> frame;
                 darker=frame*0.5;
                 cvtColor(frame,gray,CV_BGR2GRAY);
+
                 tracker->updateAframe(gray.data,frameidx);
                 updateItems();
+
+                /*
+                if(frameidx>50)
+                {
+                    imshow("frame",frame);
+                    waitKey(0);
+                }
+                */
                 emit aFrameDone();
             }
         }

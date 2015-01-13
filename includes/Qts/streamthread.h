@@ -1,10 +1,15 @@
 #ifndef STREAMTHREAD
 #define STREAMTHREAD
 
+#include "trackers/buffers.h"
 #include <QThread>
 #include <QMutex>
 #include <QWaitCondition>
-#include "trackers/klttracker.h"
+
+class KLTtracker;
+class BBox;
+class TrkScene;
+
 class StreamThread : public QThread
 {
     Q_OBJECT
@@ -23,22 +28,26 @@ public:
     QMutex mutex;
     QWaitCondition drawcv;
 
+    KLTtracker* tracker;
+    TrkScene* trkscene;
     //tracking items
     int nFeatures,gt_N;
+    bool gtInited;
     std::vector<TrackBuff> trackBuff;
     Buff<REAL> targetLoc,targetBB;
+    unsigned char* bbxft;
 public slots:
-    void streamStart(string &filename);
+    void streamStart(std::string &filename);
     bool init();
 signals:
+    void initBBox();
     void aFrameDone();
     void debug(const char * msg);
     void initSig();
 protected:
     void run();
 public:
-    bool restart;
-    bool abort;
+    bool restart,abort,pause;
 };
 
 #endif // STREAMTHREAD

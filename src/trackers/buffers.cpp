@@ -162,12 +162,39 @@ bool FrameBuff::init(int bsize,int w, int h,int l)
 }
 
 template class Buff < TrkPts >;
-/*
-void TrackBuff::updateAFrame(int x,int y,int t)
+
+void TrackBuff::clone(TrackBuff* target)
 {
-	*tailptr=x;
-	*(tailptr+1)=y;
-	*(tailptr+2)=t;
-	increPtr();
+    Buff::clone(target);
+    target->isCurved=isCurved;
 }
-*/
+void TrackBuff::clear()
+{
+    isCurved=false;
+    Buff::clear();
+}
+
+template <typename ELEM_T>
+Map3D<ELEM_T>::Map3D()
+{
+}
+template <typename ELEM_T>
+Map3D<ELEM_T>::Map3D(int h,int w,int step)
+{
+    e_step=step;
+    width=w;
+    height=h;
+    e_byte_size=e_step*sizeof(ELEM_T);
+    data=(ELEM_T *)malloc(h*w*e_byte_size);
+    memset(data,0,h*w*e_byte_size);
+}
+
+template <typename ELEM_T>
+ELEM_T& Map3D<ELEM_T>::operator()(int i,int j,int k)
+{
+    return data[k+e_step*(j+width*i)];
+}
+template class Map3D<int>;
+template class Map3D<double>;
+template class Map3D<float>;
+

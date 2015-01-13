@@ -53,3 +53,4 @@ int getLineIdx(int** x_idx,int** y_idx,int* PointA,int* PointB)
 	(*y_idx)[i]=PointB[1];
 	return idx_N+1;
 }
+

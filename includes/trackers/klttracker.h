@@ -1,22 +1,10 @@
 #ifndef KLTTRACKER_H
 #define KLTTRACKER_H
-
 #include "trackers/tracker.h"
 #include "trackers/klt_c/klt.h"
-#include "trackers/klt_c/pnmio.h"
-#include "trackers/klt_c/trk.h"
-#include <cmath>
-#include <fstream>
-#include <string>
-
-#include <opencv2/opencv.hpp>
-using namespace cv;
-
-using namespace std;
-
-#define PI 3.14159265
-#define dirN 8
-
+//#include "trackers/klt_c/pnmio.h"
+//#include "trackers/klt_c/trk.h"
+#include <vector>
 class KLTtracker : public Tracker
 {
 public:
@@ -40,11 +28,12 @@ public:
     Buff<REAL> targetLoc,targetBB;
     unsigned char* bbxft;
 	int bbw, bbh;
+    Map3D<REAL> relPos;
 
 	int init(int bsize,int w,int h);
 	int selfinit(unsigned char* framedata);
 	int initBG(int mode,unsigned char* bgptr=NULL);
-	int initGT(string & gtfilename);
+    int initGT(std::string & gtfilename);
     int updateAframe(unsigned char* framedata,int fidx);
     void updateBB();
 	void updateFGMask(unsigned char* bgptr);

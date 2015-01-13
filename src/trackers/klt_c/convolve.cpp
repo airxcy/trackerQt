@@ -88,7 +88,7 @@ static void _computeKernels(
          i++, gaussderiv->width -= 2);
     if (gauss->width == MAX_KERNEL_WIDTH || 
         gaussderiv->width == MAX_KERNEL_WIDTH)
-      KLTError("(_computeKernels) MAX_KERNEL_WIDTH %d is too small for "
+      printf("(_computeKernels) MAX_KERNEL_WIDTH %d is too small for "
                "a sigma of %f", MAX_KERNEL_WIDTH, sigma);
   }
 

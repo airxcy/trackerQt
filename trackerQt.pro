@@ -30,7 +30,8 @@ SOURCES += \
     src/trackers/klt_c/writeFeatures.cpp \
     src/trackers/buffers.cpp \
     src/trackers/klttracker.cpp \
-    src/trackers/utils.cpp
+    src/trackers/utils.cpp \
+    src/Qts/modelsqt.cpp
 
 HEADERS  += \
     includes/Qts/mainwindow.h \
@@ -49,7 +50,8 @@ HEADERS  += \
     includes/trackers/buffers.h \
     includes/trackers/klttracker.h \
     includes/trackers/tracker.h \
-    includes/trackers/utils.h
+    includes/trackers/utils.h \
+    includes/Qts/modelsqt.h
 
 FORMS    += mainwindow.ui
 

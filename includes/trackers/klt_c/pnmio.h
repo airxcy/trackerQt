@@ -21,7 +21,7 @@ unsigned char* pgmReadFile(
   int *ncols, 
   int *nrows);
 void pgmWriteFile(
-  char *fname,
+  const char *fname,
   unsigned char *img,
   int ncols,
   int nrows);

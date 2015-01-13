@@ -38,7 +38,7 @@ _KLT_FloatImage _KLTCreateFloatImage(
 
   floatimg = (_KLT_FloatImage)  malloc(nbytes);
   if (floatimg == NULL)
-    KLTError("(_KLTCreateFloatImage)  Out of memory");
+    printf("(_KLTCreateFloatImage)  Out of memory");
   floatimg->ncols = ncols;
   floatimg->nrows = nrows;
   floatimg->data = (float *)  (floatimg + 1);
@@ -94,7 +94,7 @@ void _KLTPrintSubFloatImage(
 
 void _KLTWriteFloatImageToPGM(
   _KLT_FloatImage img,
-  char *filename)
+  const char *filename)
 {
   int npixs = img->ncols * img->nrows;
   float mmax = -999999.9f, mmin = 999999.9f;
