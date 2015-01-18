@@ -127,7 +127,7 @@ QRectF DragVtx::boundingRect() const
 void DragVtx::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     painter->setPen(Qt::NoPen);
-    painter->setBrush(QColor(255,255,255,100));
+    painter->setBrush(QColor(255,255,255));
     painter->drawRect(boundingRect());
     painter->setPen(dotPen);
     painter->drawPoint(coord[0],coord[1]);
@@ -173,6 +173,7 @@ DragBBox::DragBBox(QGraphicsItem * parent):QGraphicsItem(parent)
     vtx = std::vector<DragVtx*>(2);
     vtx[0]=new DragVtx(this);
     vtx[1]=new DragVtx(this);
+    selected=false;
     //vtx[2]=new DragVtx(this);
     //vtx[3]=new DragVtx(this);
 }
@@ -183,6 +184,7 @@ DragBBox::DragBBox(int l, int t,int r,int b,QGraphicsItem * parent):QGraphicsIte
     vtx[0]=new DragVtx(l,t,this);
     //vtx[1]=new DragVtx(r,t,this);
     vtx[1]=new DragVtx(r,b,this);
+    selected=false;
     //vtx[3]=new DragVtx(l,b,this);
 }
 QRectF DragBBox::boundingRect() const
@@ -194,9 +196,13 @@ QRectF DragBBox::boundingRect() const
 void  DragBBox::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     //prepareGeometryChange();
-    painter->setBrush(inBrush);
-    painter->setPen(linePen);
+    painter->setBrush(QBrush(QColor(rgb[0],rgb[1],rgb[2],10),Qt::SolidPattern));
+    painter->setPen(QColor(rgb[0],rgb[1],rgb[2]));
     painter->drawRect(boundingRect());
+    painter->setPen(QColor(rgb[0],rgb[1],rgb[2]));
+    painter->setFont(QFont("Times",20));
+    //QRectF (vtx[0]->coord[0],vtx[0]->coord[1],12,12)
+    painter->drawText(boundingRect(), Qt::AlignCenter|Qt::AlignCenter,txt);
 }
 
 void DragBBox::mousePressEvent(QGraphicsSceneMouseEvent* event)
@@ -204,6 +210,50 @@ void DragBBox::mousePressEvent(QGraphicsSceneMouseEvent* event)
 
     if(event->button()==Qt::LeftButton)
     {
-        std::cout<<"BBox Pressed"<<std::endl;
+        selected=true;
+        x1=event->pos().x()-vtx[0]->coord[0];
+        y1=event->pos().y()-vtx[0]->coord[1];
+        x2=event->pos().x()-vtx[1]->coord[0];
+        y2=event->pos().y()-vtx[1]->coord[1];
     }
+}
+void DragBBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if(event->button()==Qt::LeftButton)
+    {
+        selected=false;
+        vtx[0]->setCoord(event->pos().x()-x1,event->pos().y()-y1);
+        vtx[1]->setCoord(event->pos().x()-x2,event->pos().y()-y2);
+    }
+    ungrabMouse();
+}
+
+void DragBBox::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
+{
+    if (!(event->buttons() & Qt::LeftButton))
+    return;
+    if(!selected)return;
+    vtx[0]->setCoord(event->pos().x()-x1,event->pos().y()-y1);
+    vtx[1]->setCoord(event->pos().x()-x2,event->pos().y()-y2);
+}
+void DragBBox::clone(DragBBox*& abox)
+{
+    int l=vtx[0]->coord[0],t=vtx[0]->coord[1],r=vtx[1]->coord[0],b=vtx[1]->coord[1];
+    if(abox==NULL)
+    {
+        std::cout<<"newed:"<<bbid<<"->";
+        abox = new DragBBox(l,t,r,b);
+    }
+    std::cout<<l<<","<<t<<","<<r<<","<<b<<","<<std::endl;
+    abox->bbid=bbid;
+    memcpy(abox->txt,txt,100);
+    memcpy(abox->rgb,rgb,3);
+    abox->vtx[0]->setCoord(l,t);
+    abox->vtx[1]->setCoord(r,b);
+}
+void DragBBox::setVtx(int l,int t,int r,int b)
+{
+    prepareGeometryChange();
+    vtx[0]->setCoord(l,t);
+    vtx[1]->setCoord(r,b);
 }

@@ -9,10 +9,28 @@
 #include <QGraphicsSceneEvent>
 #include <QMimeData>
 #include <QByteArray>
+#include <QFont>
 char viewstrbuff[200];
 void GraphicsView::resizeEvent(QResizeEvent * evt)
 {
-
+}
+void DefaultScene::mousePressEvent ( QGraphicsSceneMouseEvent * event )
+{
+    emit clicked(event);
+}
+void DefaultScene::drawBackground(QPainter * painter, const QRectF & rect)
+{
+    QPen pen;
+    QFont txtfont("Roman",40);
+    txtfont.setBold(true);
+    //txtfont.setItalic(true);
+    pen.setColor(QColor(255,255,255));
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    pen.setWidth(10);
+    painter->setPen(QColor(243,134,48,150));
+    painter->setFont(txtfont);
+    painter->drawText(rect, Qt::AlignCenter,"打开文件\nOpen File");
 }
 TrkScene::TrkScene(const QRectF & sceneRect, QObject * parent):QGraphicsScene(sceneRect, parent)
 {
@@ -42,8 +60,7 @@ void TrkScene::drawBackground(QPainter * painter, const QRectF & rect)
 {
     if(streamThd!=NULL)
     {
-        QImage bgimg(streamThd->darkerPtr,streamThd->framewidth, streamThd->frameheight, QImage::Format_RGB888);
-        //QImage fgimg(streamThd->frameptr,streamThd->framewidth, streamThd->frameheight, QImage::Format_RGB888);
+        QImage bgimg(streamThd->frameptr,streamThd->framewidth, streamThd->frameheight, QImage::Format_RGB888);
         bgBrush.setTextureImage(bgimg);
         //setBackgroundBrush(bgBrush);
         painter->setBrush(bgBrush);
@@ -101,7 +118,7 @@ void TrkScene::drawBackground(QPainter * painter, const QRectF & rect)
         {
             if(refscene!=NULL)
             {
-                refscene->initBg(bgimg);
+                //refscene->initBg(bgimg);
             }
             syncflag=!syncflag;
         }
@@ -126,9 +143,11 @@ void TrkScene::initBBox()
             bbvec[bb_i]->txt[1]='\0';
             bbvec[bb_i]->txtFont.setPixelSize(10);
             addItem(bbvec[bb_i]);
-            std::cout << bb_i<<" ";
+            std::cout << bb_i<<":"<<bb[4*bb_i+0]<<" "<<bb[4*bb_i+1]<<" "<<bb[4*bb_i+2]<<" "<<bb[4*bb_i+3]<<std::endl;;
         }
-        std::cout<<"inited"<<std::endl;
+        for(int bb_i=0;bb_i<dragBBvec.size();bb_i++)
+            dragBBvec[bb_i]->setVisible(false);
+        update();
         //if(refscene!=NULL)refscene->initBBox(bbvec,bb_N);
         syncflag=true;
     }
@@ -207,6 +226,59 @@ void TrkScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 
     //std::cout<<mouseGrabberItem()<<std::endl;
 }
+void  TrkScene::addDragBBvec(std::vector<DragBBox*>& avec)
+{
+    dragBBvec=std::vector<DragBBox*>(0);
+    for(int i =0;i<avec.size();i++)
+    {
+        DragBBox * abox= NULL;
+        avec[i]->clone(abox);
+        dragBBvec.push_back(abox);
+        std::cout<<abox<<std::endl;
+        addItem(abox);
+    }
+}
+void TrkScene::startEdit()
+{
+    if(streamThd!=NULL)
+    {
+        for(int bb_i=0;bb_i<bb_N;bb_i++)
+        {
+            dragBBvec[bb_i]->setVtx(bbvec[bb_i]->vtx[0],bbvec[bb_i]->vtx[1],bbvec[bb_i]->vtx[2],bbvec[bb_i]->vtx[3]);
+        }
+        for(int bb_i=0;bb_i<bb_N;bb_i++)
+        {
+            dragBBvec[bb_i]->setVisible(true);
+            bbvec[bb_i]->setVisible(false);
+        }
+        update();
+    }
+}
+void TrkScene::endEdit()
+{
+    if(streamThd!=NULL)
+    {
+        std::vector<REAL> bbVec(4*bb_N);
+        for(int bb_i=0;bb_i<bb_N;bb_i++)
+        {
+            int l=dragBBvec[bb_i]->vtx[0]->coord[0],
+            t=dragBBvec[bb_i]->vtx[0]->coord[1],
+            r=dragBBvec[bb_i]->vtx[1]->coord[0],
+            b=dragBBvec[bb_i]->vtx[1]->coord[1];
+            bbVec[bb_i*4+0]=l,
+            bbVec[bb_i*4+1]=t,
+            bbVec[bb_i*4+2]=r,
+            bbVec[bb_i*4+3]=b;
+            streamThd->changeCurBB(bbVec);
+        }
+        for(int bb_i=0;bb_i<bb_N;bb_i++)
+        {
+            dragBBvec[bb_i]->setVisible(false);
+            bbvec[bb_i]->setVisible(true);
+        }
+        update();
+    }
+}
 /*
 void TrkScene::dragLeaveEvent(QGraphicsSceneDragDropEvent *event)
 {
@@ -226,17 +298,16 @@ std::cout<<"Scene Press->";
 
 RefScene::RefScene(const QRectF & sceneRect, QObject * parent):QGraphicsScene(sceneRect, parent)
 {
+    dragBBvec=std::vector<DragBBox*>(0);
+    isTagging=false,isTransFering=false,tranfered=false;
+    streamThd=NULL;
 }
 RefScene::RefScene(qreal x, qreal y, qreal width, qreal height, QObject * parent):QGraphicsScene( x, y, width, height, parent)
 {
     //dragvtx = new DragVtx(100,100);
-    dragBB = new DragBBox(100,100,200,200);
-    dragBB->linePen.setColor(QColor(255,255,255));
-    dragBB->inBrush.setStyle(Qt::SolidPattern);
-    dragBB->inBrush.setColor(QColor(255,0,0,100));
-    //addItem(dragvtx);
-    addItem(dragBB);
-
+    dragBBvec=std::vector<DragBBox*>(0);
+    isTagging=false,isTransFering=false,tranfered=false;
+    streamThd=NULL;
 }
 void RefScene::initBBox(std::vector<BBox*>& arr, int N)
 {
@@ -250,14 +321,51 @@ void RefScene::initBBox(std::vector<BBox*>& arr, int N)
 }
 void RefScene::initBg(QImage &img)
 {
-    bgimg=img.copy();
+    QImage bgimg=img.copy();
     bgBrush=QBrush(bgimg);
 }
 
 void RefScene::drawBackground(QPainter * painter, const QRectF & rect)
 {
+    if(!tranfered)
+    {
+        QImage bgimg(streamThd->delayedFrameptr,streamThd->framewidth, streamThd->frameheight, QImage::Format_RGB888);
+        bgBrush.setTextureImage(bgimg);
+    }
     painter->setBrush(bgBrush);
     painter->drawRect(rect);
+    painter->setPen(Qt::white);
+    painter->setFont(QFont("Arial", 11));
+    sprintf(viewstrbuff,"%d\0",streamThd->frameidx-streamThd->delay);
+    painter->drawText(QRectF (0,0,width(),height()), Qt::AlignLeft|Qt::AlignTop, viewstrbuff);
     views().at(0)->update();
 }
-
+void RefScene::addADragBB()
+{
+    DragBBox* abox=new DragBBox(50,50,150,150);
+    int N=dragBBvec.size();
+    abox->rgb[0]=feat_colos[N%6][0],
+    abox->rgb[1]=feat_colos[N%6][1],
+    abox->rgb[2]=feat_colos[N%6][2];
+    abox->bbid=N;
+    sprintf(abox->txt,"%d\0",N);
+    dragBBvec.push_back(abox);
+    addItem(abox);
+}
+void RefScene::startTrans()
+{
+    if(!isTagging)return;
+    isTransFering=true;
+    if(trkscene!=NULL)
+    {
+        trkscene->addDragBBvec(dragBBvec);
+        //streamThd->initBB();
+    }
+}
+void RefScene::endTrans()
+{
+    QImage curimg(streamThd->delayedFrameptr,streamThd->framewidth, streamThd->frameheight, QImage::Format_RGB888);
+    QImage bgimg=curimg.copy();
+    bgBrush=QBrush(bgimg);
+    tranfered=true;
+}

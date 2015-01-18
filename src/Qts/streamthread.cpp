@@ -35,7 +35,7 @@ StreamThread::~StreamThread()
     */
     QMutexLocker lock(&mutex);
     abort = true;
-    drawcv.wakeAll();
+    cv.wakeAll();
     wait();
 }
 
@@ -49,14 +49,20 @@ bool StreamThread::init()
     abort=false;
     cap>>frame;
     darker=frame*0.5;
+    delay=20;
     cvtColor(frame,gray,CV_BGR2GRAY);
-
+    cvtColor(frame,frame,CV_BGR2RGB);
     framewidth=frame.size[1],frameheight=frame.size[0];
+    framebuff = new FrameBuff();
+    graybuff = new FrameBuff();
+    framebuff->init(frame.elemSize(),framewidth,frameheight,delay+1);
+    graybuff->init(gray.elemSize(),framewidth,frameheight,delay+1);
     frameByteSize=frame.size[0]*frame.size[1]*frame.elemSize();
-    frameptr=new unsigned char[frameByteSize];
-    darkerPtr=new unsigned char[frameByteSize];
-    memcpy(frameptr,frame.data,frameByteSize);
-    memcpy(darkerPtr,darker.data,frameByteSize);
+    framebuff->updateAFrame(frame.data);
+    graybuff->updateAFrame(gray.data);
+    frameptr=framebuff->cur_frame_ptr;
+    delayedFrameptr=framebuff->headptr;
+
     tracker=new KLTtracker();
     tracker->init(8,framewidth,frameheight);
     tracker->initBG(0);
@@ -78,8 +84,6 @@ bool StreamThread::init()
 void StreamThread::updateItems()
 {
     mutex.lock();
-    memcpy(frameptr,frame.data,frameByteSize);
-    memcpy(darkerPtr,darker.data,frameByteSize);
     for(int i=0;i<nFeatures;i++)
     {
         if(tracker->trackBuff[i].lastupdate>0)
@@ -93,10 +97,10 @@ void StreamThread::updateItems()
         }
     }
     if(tracker->gt_inited&&bbxft!=NULL)
-        memcpy(bbxft,tracker->bbxft,gt_N*nFeatures*sizeof(unsigned char));
+        memcpy(bbxft,tracker->bbxft,gt_N*nFeatures*sizeof(int));
     if(gt_N>0)
     {
-        tracker->targetLoc.clone(&targetLoc);
+        //tracker->targetLoc.clone(&targetLoc);
         tracker->targetBB.clone(&targetBB);
         if(trkscene!=NULL&&trkscene->bbvec.size()>0)
         {
@@ -107,8 +111,37 @@ void StreamThread::updateItems()
                 trkscene->bbvec[bb_i]->updateVtx(l,t,r,b);
             }
         }
+
     }
     mutex.unlock();
+}
+void StreamThread::initBB()
+{
+    gt_N=trkscene->dragBBvec.size();
+    targetBB.init(4*gt_N,10);
+    vector<REAL> bbVec(4*gt_N),dlyVec(4*gt_N);
+    for(int bb_i=0;bb_i<gt_N;bb_i++)
+    {
+        bbVec[bb_i*4+0]=trkscene->dragBBvec[bb_i]->vtx[0]->coord[0];
+        bbVec[bb_i*4+1]=trkscene->dragBBvec[bb_i]->vtx[0]->coord[1];
+        bbVec[bb_i*4+2]=trkscene->dragBBvec[bb_i]->vtx[1]->coord[0];
+        bbVec[bb_i*4+3]=trkscene->dragBBvec[bb_i]->vtx[1]->coord[1];
+        dlyVec[bb_i*4+0]=refscene->dragBBvec[bb_i]->vtx[0]->coord[0];
+        dlyVec[bb_i*4+1]=refscene->dragBBvec[bb_i]->vtx[0]->coord[1];
+        dlyVec[bb_i*4+2]=refscene->dragBBvec[bb_i]->vtx[1]->coord[0];
+        dlyVec[bb_i*4+3]=refscene->dragBBvec[bb_i]->vtx[1]->coord[1];
+    }
+    targetBB.updateAFrame(bbVec.data());
+    bbxft=new int[gt_N*nFeatures];
+    tracker->initBB(targetBB,dlyVec,gt_N,delay);
+    emit initBBox();
+    gtInited=true;
+}
+void StreamThread::changeCurBB(std::vector<REAL>& bbVec)
+{
+    //memcpy(targetBB.cur_frame_ptr,bbVec.data(),targetBB.frame_byte_size);
+    tracker->changeBB(bbVec);
+    updateItems();
 }
 void StreamThread::streaming()
 {
@@ -127,8 +160,14 @@ void StreamThread::streaming()
                         break;
                 if (abort)
                         return;
-                while(pause);
+                if(pause)
+                {
+                    mutex.lock();
+                    cv.wait(&mutex);
+                    mutex.unlock();
+                }
                 frameidx++;
+                /*
                 if ((frameidx - 50) % 1500 == 0)
                 {
                     mutex.lock();
@@ -147,14 +186,17 @@ void StreamThread::streaming()
                     emit initBBox();
                     std::cout <<"siged"<<std::endl;
                 }
-
+                */
                 cap >> frame;
                 darker=frame*0.5;
                 cvtColor(frame,gray,CV_BGR2GRAY);
-
+                cvtColor(frame,frame,CV_BGR2RGB);
+                framebuff->updateAFrame(frame.data);
+                graybuff->updateAFrame(gray.data);
+                frameptr=framebuff->cur_frame_ptr;
+                delayedFrameptr=framebuff->headptr;
                 tracker->updateAframe(gray.data,frameidx);
                 updateItems();
-
                 /*
                 if(frameidx>50)
                 {

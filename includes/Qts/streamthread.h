@@ -9,7 +9,7 @@
 class KLTtracker;
 class BBox;
 class TrkScene;
-
+class RefScene;
 class StreamThread : public QThread
 {
     Q_OBJECT
@@ -23,27 +23,34 @@ public:
     std::string vidfname,gtdir, gtbasedir, vidid;
     char strbuff[100];
     unsigned char * frameptr;
-    unsigned char * darkerPtr;
     int framewidth,frameheight,frameidx,frameByteSize,gtframeidx;
     QMutex mutex;
-    QWaitCondition drawcv;
+    QWaitCondition cv;
 
     KLTtracker* tracker;
     TrkScene* trkscene;
+    RefScene* refscene;
     //tracking items
     int nFeatures,gt_N;
     bool gtInited;
     std::vector<TrackBuff> trackBuff;
     Buff<REAL> targetLoc,targetBB;
-    unsigned char* bbxft;
+    int* bbxft;
+
+    int delay;
+    FrameBuff* framebuff,* graybuff;
+    unsigned char * delayedFrameptr;
 public slots:
     void streamStart(std::string &filename);
     bool init();
+    void initBB();
+    void changeCurBB(std::vector<REAL>& bbVec);
 signals:
     void initBBox();
     void aFrameDone();
     void debug(const char * msg);
     void initSig();
+
 protected:
     void run();
 public:

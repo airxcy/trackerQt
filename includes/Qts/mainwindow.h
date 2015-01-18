@@ -7,29 +7,12 @@
 #include <QWidget>
 #include <QGraphicsView>
 #include <QLayout>
+#include <QPushButton>
 class StreamThread;
 class TrkScene;
 class GraphicsView;
 class RefScene;
-class DefaultScene : public QGraphicsScene
-{
-    Q_OBJECT
-public:
-    DefaultScene(const QRectF & sceneRect, QObject * parent = 0):QGraphicsScene(sceneRect, parent)
-    {
-
-    }
-    DefaultScene(qreal x, qreal y, qreal width, qreal height, QObject * parent = 0):QGraphicsScene( x, y, width, height, parent)
-    {
-
-    }
-    virtual void mousePressEvent ( QGraphicsSceneMouseEvent * event ) Q_DECL_OVERRIDE;
-
-signals:
-    void clicked(QGraphicsSceneMouseEvent * event);
-};
-
-
+class DefaultScene;
 //! [0]
 class MainWindow : public QMainWindow
 {
@@ -46,14 +29,28 @@ public:
     GraphicsView* refview;
     QGraphicsScene * ascene;
     DefaultScene* defaultscene;
-    QBoxLayout* layout;
+    QGridLayout* layout;
+
+    QPushButton* startTag;
+    QPushButton* addTag;
+    QPushButton* transTag;
+    QPushButton* finishTag;
+    QPushButton* editTag;
+    QPushButton* resumeTag;
+
+    QString btnstyle;
     //virtual void resizeEvent(QResizeEvent *) Q_DECL_OVERRIDE;
     void setupLayout();
     void makeConns();
 public slots:
     void gviewClicked(QGraphicsSceneMouseEvent * event);
     void initUI();
-    void updateAFrame();
+    void startTagging();
+    void finishTagging();
+    void addATag();
+    void transfer();
+    void pauseEdit();
+    void resume();
 };
 //! [0]
 

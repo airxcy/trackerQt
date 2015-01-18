@@ -26,7 +26,8 @@ public:
 	std::vector<TrackBuff> trackBuff;
 	TrkPts pttmp;
     Buff<REAL> targetLoc,targetBB;
-    unsigned char* bbxft;
+    std::vector<REAL> dlyBB,dirVec;
+    int* bbxft;
 	int bbw, bbh;
     Map3D<REAL> relPos;
 
@@ -34,10 +35,12 @@ public:
 	int selfinit(unsigned char* framedata);
 	int initBG(int mode,unsigned char* bgptr=NULL);
     int initGT(std::string & gtfilename);
+    int initBB(Buff<REAL>& bbbuff,std::vector<REAL>& dlyvec,int bbN,int dly);
+    void changeBB(std::vector<REAL>& bbVec);
     int updateAframe(unsigned char* framedata,int fidx);
     void updateBB();
 	void updateFGMask(unsigned char* bgptr);
-	
+
 	int checkFG(int x,int y);
 	bool checkTrackMoving(TrackBuff &strk);
 	bool checkCurve(TrackBuff &strk);
