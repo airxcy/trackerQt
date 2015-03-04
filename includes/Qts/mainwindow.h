@@ -31,6 +31,7 @@ public:
     DefaultScene* defaultscene;
     QGridLayout* layout;
 
+    QPushButton* beginBtn;
     QPushButton* startTag;
     QPushButton* addTag;
     QPushButton* transTag;
@@ -38,19 +39,20 @@ public:
     QPushButton* editTag;
     QPushButton* resumeTag;
 
-    QString btnstyle;
     //virtual void resizeEvent(QResizeEvent *) Q_DECL_OVERRIDE;
     void setupLayout();
     void makeConns();
 public slots:
     void gviewClicked(QGraphicsSceneMouseEvent * event);
     void initUI();
+    void beginTracking();
     void startTagging();
     void finishTagging();
     void addATag();
     void transfer();
     void pauseEdit();
     void resume();
+
 };
 //! [0]
 

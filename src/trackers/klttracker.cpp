@@ -83,7 +83,6 @@ int KLTtracker::selfinit(unsigned char* framedata)
 			trackBuff[k].updateAFrame(&pttmp);
 		}
 	}
-
 	return true;
 }
 int checkinBB(REAL x,REAL y,REAL left,REAL top,REAL right,REAL bottom)
@@ -107,7 +106,7 @@ int KLTtracker::initGT(string & gtfilename)
 			bbw = 40, bbh = 100;
 			sscanf_s(strbuf, "%d", &gt_N);
 			std::cout << gtfilename << "gt:" << gt_N << std::endl;
-            targetLoc.init(2* gt_N,10);
+            targetLoc=std::vector<TrackBuff>(gt_N);
             targetBB.init(4*gt_N,10);
             vector<REAL> locVec(2* gt_N), bbVec(4* gt_N);
 			for (int gt_i = 0; gt_i < gt_N; gt_i++)
@@ -120,7 +119,7 @@ int KLTtracker::initGT(string & gtfilename)
                 locVec[gt_i*2]=pos[0],locVec[gt_i*2+1]=pos[1];
                 bbVec[gt_i*4]=bb[0],bbVec[gt_i*4+1]=bb[1],bbVec[gt_i*4+2]=bb[2],bbVec[gt_i*4+3]=bb[3];
 			}
-            targetLoc.updateAFrame(locVec.data());
+            //targetLoc.updateAFrame(locVec.data());
             targetBB.updateAFrame(bbVec.data());
             bbxft=new int[gt_N*nFeatures];
             relPos=Map3D<REAL>(gt_N,nFeatures,2);
@@ -148,13 +147,15 @@ int KLTtracker::initGT(string & gtfilename)
 }
 int getAvgVec(TrackBuff& trk,REAL * dir,int dly)
 {
-    if(trk.len<=dly+1)return 0;
-    TrkPts * aptr = trk.getPtr(trk.len - dly-1);
-    TrkPts * bptr = trk.getPtr(trk.len-1);
+    if(trk.len<=8)return 0;
+    int startidx=0,endidx=trk.len-1;
+    TrkPts * aptr = trk.getPtr(startidx);
+    TrkPts * bptr = trk.getPtr(endidx);
     dir[0]=bptr->x - aptr->x;
     dir[1]=bptr->y - aptr->y;
-    dir[0]/=dly;
-    dir[1]/=dly;
+    REAL norm=sqrt(dir[0]*dir[0]+dir[1]*dir[1]);
+    dir[0]/=norm;
+    dir[1]/=norm;
     return 1;
     /*
     for (int j = 1; j <strk.len; ++j)
@@ -166,6 +167,21 @@ int getAvgVec(TrackBuff& trk,REAL * dir,int dly)
         if (dtmp>maxdist)maxdist = dtmp;
     }
     */
+}
+int PredictTrk(TrkPts* point,TrackBuff& trk)
+{
+    if(trk.len<2)
+    {
+        memcpy(point,trk.cur_frame_ptr,sizeof(TrkPts));
+        return 0;
+    }
+    int startidx=max(trk.len-8,0),endidx=trk.len-1;
+    double len=endidx-startidx+1;
+    TrkPts* aptr=trk.getPtr(startidx);
+    TrkPts* bptr=trk.getPtr(endidx);
+    point->x=(bptr->x-aptr->x)/len+bptr->x;
+    point->y=(bptr->y-aptr->y)/len+bptr->y;
+    point->t=bptr->t+1;
 }
 int KLTtracker::initBB(Buff<REAL>& bbbuff, std::vector<REAL>& dlyvec, int bbN, int dly)
 {
@@ -180,6 +196,9 @@ int KLTtracker::initBB(Buff<REAL>& bbbuff, std::vector<REAL>& dlyvec, int bbN, i
         REAL* bbVec=targetBB.cur_frame_ptr;
         dlyBB=std::vector<REAL>(dlyvec);
         dirVec=std::vector<REAL>(gt_N*2);
+        comVec=std::vector<REAL>(gt_N*2);
+        targetLoc=std::vector<TrackBuff>(gt_N);
+        refpoint=new int[gt_N];
         REAL dir[2];
         for(int bb_i=0;bb_i<gt_N;bb_i++)
         {
@@ -198,7 +217,7 @@ int KLTtracker::initBB(Buff<REAL>& bbbuff, std::vector<REAL>& dlyvec, int bbN, i
                         drx+=dir[0],dry+=dir[1];
                         counter++;
                     }
-                    bbxft[bb_i*nFeatures+ft_i]=1;
+                    bbxft[bb_i*nFeatures+ft_i]=5;
                     relPos(bb_i,ft_i,0)=x-bbVec[bb_i*4];
                     relPos(bb_i,ft_i,1)=y-bbVec[bb_i*4+1];
                 }
@@ -208,11 +227,42 @@ int KLTtracker::initBB(Buff<REAL>& bbbuff, std::vector<REAL>& dlyvec, int bbN, i
             if(counter>0)
             {
                 drx/=counter,dry/=counter;
-                dirVec[bb_i*2]=drx,dirVec[bb_i*2+1]=dry;
+                //dirVec[bb_i*2]=drx,dirVec[bb_i*2+1]=dry;
             }
-            else
-                dirVec[bb_i*2]=0,dirVec[bb_i*2+1]=0;
-
+            //else
+                //dirVec[bb_i*2]=0,dirVec[bb_i*2+1]=0;
+            //dirVec[bb_i*2]=bbVec[bb_i*4]-dlyBB[bb_i*4],dirVec[bb_i*2+1]=bbVec[bb_i*4+1]-dlyBB[bb_i*4+1];
+            dirVec[bb_i*2]=dir[0],dirVec[bb_i*2+1]=dir[1];
+            REAL norm=sqrt(dirVec[bb_i*2]*dirVec[bb_i*2]+dirVec[bb_i*2+1]*dirVec[bb_i*2+1]);
+            dirVec[bb_i*2]/=norm,dirVec[bb_i*2+1]/=norm;
+            refpoint[bb_i]=(dirVec[bb_i*2]>0)+2*(dirVec[bb_i*2+1]>0);
+            comVec[bb_i*2]=(bbVec[bb_i*4]+bbVec[bb_i*4+2])/2.0,comVec[bb_i*2+1]=(bbVec[bb_i*4+1]+bbVec[bb_i*43])/2.0;
+            pttmp.x=comVec[bb_i*2];
+            pttmp.y=comVec[bb_i*2+1];
+            pttmp.t=0;
+            std::cout<<"bb_i:"<<bb_i<<std::endl;
+            targetLoc[bb_i].init(1,100);
+            targetLoc[bb_i].updateAFrame(&pttmp);
+        }
+        for(int bb_i=0;bb_i<gt_N;bb_i++)
+        {
+            for(int ft_i=0;ft_i<nFeatures;ft_i++)
+            {
+                PntT x=trackBuff[ft_i].cur_frame_ptr->x;
+                PntT y=trackBuff[ft_i].cur_frame_ptr->y;
+                if(checkinBB(x, y, bbVec[bb_i*4],bbVec[bb_i*4+1],bbVec[bb_i*4+2],bbVec[bb_i*4+3]))
+                {
+                    bbxft[bb_i*nFeatures+ft_i]=10;
+                    relPos(bb_i,ft_i,0)=x-targetLoc[bb_i].cur_frame_ptr->x;
+                    relPos(bb_i,ft_i,1)=y-targetLoc[bb_i].cur_frame_ptr->y;
+                }
+                else
+                {
+                    bbxft[bb_i*nFeatures+ft_i]=0;
+                    relPos(bb_i,ft_i,0)=-99999;
+                    relPos(bb_i,ft_i,1)=-99999;
+                }
+            }
         }
         gt_inited = true;
     }
@@ -230,10 +280,16 @@ void KLTtracker::changeBB(std::vector<REAL>& bbVec)
             PntT y=trackBuff[ft_i].cur_frame_ptr->y;
             if(checkinBB(x, y, bbVec[bb_i*4],bbVec[bb_i*4+1],bbVec[bb_i*4+2],bbVec[bb_i*4+3]))
             {
-                bbxft[bb_i*nFeatures+ft_i]=1;
+                bbxft[bb_i*nFeatures+ft_i]=10;
+                relPos(bb_i,ft_i,0)=x-targetLoc[bb_i].cur_frame_ptr->x;
+                relPos(bb_i,ft_i,1)=y-targetLoc[bb_i].cur_frame_ptr->y;
             }
             else
+            {
                 bbxft[bb_i*nFeatures+ft_i]=0;
+                relPos(bb_i,ft_i,0)=-99999;
+                relPos(bb_i,ft_i,1)=-99999;
+            }
         }
     }
 }
@@ -259,6 +315,7 @@ int KLTtracker::checkFG(int x,int y)
 	else 
 		return true;
 }
+
 void KLTtracker::updateBB()
 {
 
@@ -270,11 +327,14 @@ void KLTtracker::updateBB()
         int dircount[dirN]={};
         double dirscore[dirN]={};
         REAL dx=0,dy=0;
-        int dcount=0;
+        int dcount=0,totw=0;
         double relx=0,rely=0;
         //REAL left=bbVec[bb_i*4],top=bbVec[bb_i*4+1],right=bbVec[bb_i*4+2],bottom=bbVec[bb_i*4+3];
+        REAL w=abs(bbVec[bb_i*4+2]-bbVec[bb_i*4]),h=abs(bbVec[bb_i*4+3]-bbVec[bb_i*4+1]);
         REAL left=frame_width,top=frame_height,right=0,bottom=0;
         REAL maxdx=0,maxdy=0,maxdist=0;
+        REAL comx=0,comy=0;
+
         for(int ft_i=0;ft_i<nFeatures;ft_i++)
         {
             if(trackBuff[ft_i].len>1)
@@ -284,7 +344,8 @@ void KLTtracker::updateBB()
                 PntT xt_1=(trackBuff[ft_i].cur_frame_ptr-1)->x;
                 PntT yt_1=(trackBuff[ft_i].cur_frame_ptr-1)->y;
                 PntT ddx=xt-xt_1,ddy=yt-yt_1;
-                if(bbxft[bb_i*nFeatures+ft_i])//&&ddx!=0&&ddy!=0)
+                REAL proj=ddx*dirVec[bb_i*2]+ddy*dirVec[bb_i*2+1];
+                if(bbxft[bb_i*nFeatures+ft_i]>0&&proj>0)//&&ddx!=0&&ddy!=0)
                 {
                     /*
                     double maxsc=-99999;
@@ -297,10 +358,13 @@ void KLTtracker::updateBB()
                     }
                     dircount[maxidx]++;
                     */
+                    REAL w= pow(bbxft[bb_i*nFeatures+ft_i],3);
+                    totw+=w;
                     if(xt<left)left=xt;
                     if(xt>right)right=xt;
                     if(yt<top)top=yt;
                     if(yt>bottom)bottom=yt;
+                    comx+=xt*w,comy+=yt*w;
                     REAL dist= sqrt(ddx*ddx+ddy*ddy);
                     if(maxdist<dist){maxdx=ddx;maxdy=ddy;maxdist=dist;}
                     relx=relx+(xt-relPos(bb_i,ft_i,0));
@@ -322,22 +386,60 @@ void KLTtracker::updateBB()
             dx=directions[maxidx][0],dy=directions[maxidx][1];
             */
             dx=dx/dcount,dy=dy/dcount;
+            comx/=totw,comy/=totw;
+
             REAL alhpa=0.5;
             dx=(dx*alhpa+maxdx*(1-alhpa)),dy=(dy*alhpa+maxdy*(1-alhpa));
             //std::cout<<dx<<","<<dy<<"|";
             relx/=dcount,rely/=dcount;
+            PredictTrk(&pttmp,targetLoc[bb_i]);
+            pttmp.x=(pttmp.x+comx)/2;
+            pttmp.y=(pttmp.y+comy)/2;
+            pttmp.t=frameidx;
+            targetLoc[bb_i].updateAFrame(&pttmp);
+            //TODO
             //dx=relx-bbVec[bb_i*4],dy=rely-bbVec[bb_i*4+1];
             //std::cout<<dx<<","<<dy<<std::endl;
         }
+        else
+        {
+            pttmp.x=(pttmp.x+comx)/2;
+            pttmp.y=(pttmp.y+comy)/2;
+            pttmp.t=frameidx;
+            targetLoc[bb_i].updateAFrame(targetLoc[bb_i].cur_frame_ptr);
+        }
+        switch(refpoint[bb_i])
+        {
+            case 0:
+                newbb[bb_i*4]=left-1,newbb[bb_i*4+1]=top-1;
+                newbb[bb_i*4+2]=newbb[bb_i*4]+w,newbb[bb_i*4+3]=newbb[bb_i*4+1]+h;
+                break;
+            case 1:
+                newbb[bb_i*4+2]=right+1,newbb[bb_i*4+1]=top-1;
+                newbb[bb_i*4]=newbb[bb_i*4+2]-w,newbb[bb_i*4+3]=newbb[bb_i*4+1]+h;
+                break;
+            case 3:
+                newbb[bb_i*4+2]=right+1,newbb[bb_i*4+3]=bottom+1;
+                newbb[bb_i*4]=newbb[bb_i*4+2]-w,newbb[bb_i*4+1]=newbb[bb_i*4+3]-h;
+                break;
+            case 2:
+                newbb[bb_i*4]=left-1,newbb[bb_i*4+3]=bottom+1;
+                newbb[bb_i*4+2]=newbb[bb_i*4]+w,newbb[bb_i*4+1]=newbb[bb_i*4+3]-h;
+                break;
+            default:
+                newbb[bb_i*4]=bbVec[bb_i*4],newbb[bb_i*4+1]=bbVec[bb_i*4+1],newbb[bb_i*4+2]=bbVec[bb_i*4+2],newbb[bb_i*4+3]=bbVec[bb_i*4+3];
+        }
         //dx=maxdx,dy=maxdy;
         //newbb[bb_i*4]=relx,newbb[bb_i*4+1]=rely,newbb[bb_i*4+2]=relx+bbw,newbb[bb_i*4+3]=rely+bbh;
+        /*
         newbb[bb_i*4]=left-1,newbb[bb_i*4+1]=top-1,newbb[bb_i*4+2]=right+1,newbb[bb_i*4+3]=bottom+1;
-    /*
+
         newbb[bb_i*4]=bbVec[bb_i*4]+dx,
         newbb[bb_i*4+1]=bbVec[bb_i*4+1]+dy,
         newbb[bb_i*4+2]=bbVec[bb_i*4+2]+dx,
         newbb[bb_i*4+3]=bbVec[bb_i*4+3]+dy;
-    */
+        */
+        ;
         //memcpy(newbb,bbVec,targetBB.frame_byte_size);
         //newbb[bb_i*4]+=dx,newbb[bb_i*4+1]+=dy,newbb[bb_i*4+2]+=dx,newbb[bb_i*4+3]+=dy;
     }
@@ -346,6 +448,8 @@ void KLTtracker::updateBB()
 
     for(int bb_i=0;bb_i<gt_N;bb_i++)
     {
+        REAL dir[2]={0,0};
+        getAvgVec(targetLoc[bb_i], dir,5);
         for(int ft_i=0;ft_i<nFeatures;ft_i++)
         {
             //bb[0]=bbVec[gt_i*4],bb[1]=bbVec[gt_i*4+1],bb[2]=bbVec[gt_i*4+2],bb[3]=bbVec[gt_i*4+3];
@@ -354,15 +458,24 @@ void KLTtracker::updateBB()
             if(checkinBB(x, y, bbVec[bb_i*4],bbVec[bb_i*4+1],bbVec[bb_i*4+2],bbVec[bb_i*4+3]))
             {
                 //std::cout<<"1,";
-                bbxft[bb_i*nFeatures+ft_i]=1;
+                bbxft[bb_i*nFeatures+ft_i]+=2;
                 //if(trackBuff[ft_i].lastupdate<0)
-                    relPos(bb_i,ft_i,0)=((x-bbVec[bb_i*4])+relPos(bb_i,ft_i,0))/2.0
-                    ,relPos(bb_i,ft_i,1)=((y-bbVec[bb_i*4+1])+relPos(bb_i,ft_i,0))/2.0;
+                //relPos(bb_i,ft_i,0)=((x-bbVec[bb_i*4])+relPos(bb_i,ft_i,0))/2.0,relPos(bb_i,ft_i,1)=((y-bbVec[bb_i*4+1])+relPos(bb_i,ft_i,0))/2.0;
             }
+            /*
             else
             {
-                //bbxft[bb_i*nFeatures+ft_i]=0;
+                bbxft[bb_i*nFeatures+ft_i]-=1;
                 //std::cout<<"0,";
+            }
+            */
+            double relx=x-targetLoc[bb_i].cur_frame_ptr->x;
+            double rely=y-targetLoc[bb_i].cur_frame_ptr->y;
+            double divx=relx-relPos(bb_i,ft_i,0),divy=rely-relPos(bb_i,ft_i,1);
+            double div=divx*dir[0]+divy*dir[2];
+            if(div<-5)
+            {
+                bbxft[bb_i*nFeatures+ft_i]=-10;
             }
             //std::cout<<std::endl;
         }

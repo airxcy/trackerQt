@@ -1,7 +1,7 @@
 #include "Qts/viewqt.h"
 #include "Qts/modelsqt.h"
 #include "Qts/streamthread.h"
-
+#include "trackers/klttracker.h"
 #include <QPainter>
 #include <QBrush>
 #include <QPixmap>
@@ -41,6 +41,7 @@ TrkScene::TrkScene(const QRectF & sceneRect, QObject * parent):QGraphicsScene(sc
     dragBB=new BBox();
     addItem(dragBB);
     dragBB->setVisible(false);
+    bb_N=0;
 
 }
 TrkScene::TrkScene(qreal x, qreal y, qreal width, qreal height, QObject * parent):QGraphicsScene( x, y, width, height, parent)
@@ -55,6 +56,7 @@ TrkScene::TrkScene(qreal x, qreal y, qreal width, qreal height, QObject * parent
     dragBB=new BBox();
     addItem(dragBB);
     dragBB->setVisible(false);
+    bb_N=0;
 }
 void TrkScene::drawBackground(QPainter * painter, const QRectF & rect)
 {
@@ -71,48 +73,30 @@ void TrkScene::drawBackground(QPainter * painter, const QRectF & rect)
         sprintf(viewstrbuff,"%d\0",streamThd->frameidx);
         painter->drawText(QRectF (0,0,width(),height()), Qt::AlignLeft|Qt::AlignTop, viewstrbuff);
         //int maxcount=0;
-        for(int i=0;i<streamThd->nFeatures;i++)
+        drawFPts(painter,rect);
+        if(bb_N>0&&streamThd->gtInited)
         {
-            TrackBuff& trk=streamThd->trackBuff[i];
-            QPen linepen;
-            float opcacity = 1,rgb[3]={0,0,0},opincre=1;
-            bool interested= false;
-            TrkPts *aptr=NULL,*bptr=NULL;
-            if (trk.len > 5)
-            {
-                //float opcacity = 1;
-                int coounttmp=0;
-                for(int bb_i=0;bb_i<streamThd->gt_N;bb_i++)
-                {
-                    if(streamThd->bbxft[bb_i*streamThd->nFeatures+i])
-                    {
-                        rgb[0]+=feat_colos[bb_i%6][0],rgb[1]+=feat_colos[bb_i%6][1],rgb[2]+=feat_colos[bb_i%6][2];
-                        coounttmp++;
-                    }
-                }
-                //maxcount=(maxcount>coounttmp)?maxcount:coounttmp;
-                if(coounttmp)
-                {
-                    rgb[0]=(rgb[0]/coounttmp>255)?255:(rgb[0]/coounttmp),
-                    rgb[1]=(rgb[1]/coounttmp>255)?255:(rgb[1]/coounttmp),
-                    rgb[2]=(rgb[2]/coounttmp>255)?255:(rgb[2]/coounttmp);
-                }
-                else
-                    rgb[0]=255,rgb[1]=255,rgb[2]=255,opincre=0.5;
-                //if(coounttmp>1)
-                    for (int j = 1; j <trk.len; ++j)
-                    {
-                        opcacity+=opincre;
-                        opcacity=(opcacity>255)?255:opcacity;
-                        linepen.setColor(QColor(rgb[0],rgb[1],rgb[2],opcacity));
-                        painter->setPen(linepen);
-                        aptr = trk.getPtr(j - 1);
-                        bptr = trk.getPtr(j);
-                        painter->drawLine(aptr->x,aptr->y,bptr->x,bptr->y);
+            QPen apen;
+            apen.setWidth(3);
 
-                    }
+            for(int bb_i=0;bb_i<bb_N;bb_i++)
+            {
+                QColor ac(dragBBvec[bb_i]->rgb[0],dragBBvec[bb_i]->rgb[1],dragBBvec[bb_i]->rgb[2]);
+                apen.setColor(ac);
+                painter->setPen(apen);
+                int xref=((streamThd->tracker->refpoint[bb_i])%2)*2,
+                    yref=((streamThd->tracker->refpoint[bb_i])>2)*2+1;
+                REAL x0=bbvec[bb_i]->vtx[xref],y0=bbvec[bb_i]->vtx[yref],
+                    x1=streamThd->dirVec[bb_i*2]*20+x0,y1=streamThd->dirVec[bb_i*2+1]*20+y0;
+                painter->drawLine(x0,y0,x1,y1);
+                QPen bpen(QColor(dragBBvec[bb_i]->rgb[0],dragBBvec[bb_i]->rgb[1],dragBBvec[bb_i]->rgb[2]));
+                bpen.setWidth(4);
+                painter->setPen(bpen);
+                TrkPts* aptr=streamThd->tracker->targetLoc[bb_i].cur_frame_ptr;
+                painter->drawPoint(aptr->x,aptr->y);
             }
         }
+        painter->setPen(QPen());
         views().at(0)->update();
         if(syncflag)
         {
@@ -121,6 +105,51 @@ void TrkScene::drawBackground(QPainter * painter, const QRectF & rect)
                 //refscene->initBg(bgimg);
             }
             syncflag=!syncflag;
+        }
+    }
+}
+void TrkScene::drawFPts(QPainter *painter, const QRectF &rect)
+{
+    for(int i=0;i<streamThd->nFeatures;i++)
+    {
+        TrackBuff& trk=streamThd->trackBuff[i];
+        QPen linepen;
+        float opcacity = 255,rgb[3]={0,0,0},opincre=1;
+        bool interested= false;
+        TrkPts *aptr=NULL,*bptr=NULL;
+        if (trk.len > 5)
+        {
+            //float opcacity = 1;
+            int coounttmp=0;
+            for(int bb_i=0;bb_i<streamThd->gt_N;bb_i++)
+            {
+                if(streamThd->bbxft[bb_i*streamThd->nFeatures+i]>0)
+                {
+                    rgb[0]+=feat_colos[bb_i%6][0],rgb[1]+=feat_colos[bb_i%6][1],rgb[2]+=feat_colos[bb_i%6][2];
+                    coounttmp++;
+                }
+            }
+            //maxcount=(maxcount>coounttmp)?maxcount:coounttmp;
+            if(coounttmp)
+            {
+                rgb[0]=(rgb[0]/coounttmp>255)?255:(rgb[0]/coounttmp),
+                rgb[1]=(rgb[1]/coounttmp>255)?255:(rgb[1]/coounttmp),
+                rgb[2]=(rgb[2]/coounttmp>255)?255:(rgb[2]/coounttmp);
+            }
+            else
+                rgb[0]=255,rgb[1]=255,rgb[2]=255,opincre=0.5;
+            //if(coounttmp>1)
+                for (int j = trk.len-1; j <trk.len; ++j)
+                {
+                    opcacity+=opincre;
+                    opcacity=(opcacity>255)?255:opcacity;
+                    linepen.setColor(QColor(rgb[0],rgb[1],rgb[2],opcacity));
+                    painter->setPen(linepen);
+                    aptr = trk.getPtr(j - 1);
+                    bptr = trk.getPtr(j);
+                    painter->drawLine(aptr->x,aptr->y,bptr->x,bptr->y);
+
+                }
         }
     }
 }
@@ -139,8 +168,9 @@ void TrkScene::initBBox()
             bbvec[bb_i]->bbid=bb_i;
             bbvec[bb_i]->updateVtx(bb[4*bb_i+0],bb[4*bb_i+1],bb[4*bb_i+2],bb[4*bb_i+3]);
             bbvec[bb_i]->linePen.setColor(QColor(feat_colos[bb_i%6][0],feat_colos[bb_i%6][1],feat_colos[bb_i%6][2],100));
-            bbvec[bb_i]->txt[0]=(bb_i-0)+'0';
-            bbvec[bb_i]->txt[1]='\0';
+            //bbvec[bb_i]->txt[0]=(bb_i-0)+'0';
+            //bbvec[bb_i]->txt[1]='\0';
+            sprintf(bbvec[bb_i]->txt,"%d,%d\0",bb_i,streamThd->tracker->refpoint[bb_i]);
             bbvec[bb_i]->txtFont.setPixelSize(10);
             addItem(bbvec[bb_i]);
             std::cout << bb_i<<":"<<bb[4*bb_i+0]<<" "<<bb[4*bb_i+1]<<" "<<bb[4*bb_i+2]<<" "<<bb[4*bb_i+3]<<std::endl;;

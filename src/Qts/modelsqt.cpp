@@ -203,8 +203,8 @@ void  DragBBox::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
     painter->setFont(QFont("Times",20));
     //QRectF (vtx[0]->coord[0],vtx[0]->coord[1],12,12)
     painter->drawText(boundingRect(), Qt::AlignCenter|Qt::AlignCenter,txt);
+    //painter->drawText(Rectf(vtx[0]->coord[0],vtx[0]->coord[1]), Qt::AlignCenter|Qt::AlignCenter,);
 }
-
 void DragBBox::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
 

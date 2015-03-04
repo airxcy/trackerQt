@@ -25,8 +25,10 @@ public:
 
 	std::vector<TrackBuff> trackBuff;
 	TrkPts pttmp;
-    Buff<REAL> targetLoc,targetBB;
-    std::vector<REAL> dlyBB,dirVec;
+    Buff<REAL> targetBB;
+    std::vector<TrackBuff> targetLoc;
+    std::vector<REAL> dlyBB,dirVec,comVec;
+    int* refpoint;
     int* bbxft;
 	int bbw, bbh;
     Map3D<REAL> relPos;

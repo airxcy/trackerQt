@@ -32,7 +32,7 @@ public:
     RefScene* refscene;
     //tracking items
     int nFeatures,gt_N;
-    bool gtInited;
+    bool gtInited,isTracking;
     std::vector<TrackBuff> trackBuff;
     Buff<REAL> targetLoc,targetBB;
     int* bbxft;
@@ -40,11 +40,17 @@ public:
     int delay;
     FrameBuff* framebuff,* graybuff;
     unsigned char * delayedFrameptr;
+    std::vector<REAL> dirVec;
+
+
+
+    void beginTracking();
 public slots:
     void streamStart(std::string &filename);
     bool init();
     void initBB();
     void changeCurBB(std::vector<REAL>& bbVec);
+
 signals:
     void initBBox();
     void aFrameDone();

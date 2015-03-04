@@ -28,7 +28,7 @@ void MainWindow::setupLayout()
 
 
     layout=new QGridLayout(cWidget);
-    btnstyle = "QPushButton { background: rgba(243,134,48,100); color:rgba(243,134,48);} QPushButton:disabled{background: rgba(0,0,0,100)}";
+
     //defaultscene->setBackgroundBrush(QImage(":/images/default.png"));
     gview->setFixedSize(defaultscene->width()+2,defaultscene->height()+2);
     //gview->setMinimumSize(defaultscene->width()+2,defaultscene->height()+2);
@@ -36,57 +36,68 @@ void MainWindow::setupLayout()
     //gview->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     gview->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     refview->setFixedSize(defaultscene->width()+2,defaultscene->height()+2);
-    layout->addWidget(refview,0,0,1,3,Qt::AlignLeft);
-    layout->addWidget(gview,0,3,1,3,Qt::AlignLeft);
+    layout->addWidget(refview,0,0,1,4,Qt::AlignLeft);
+    layout->addWidget(gview,0,4,1,4,Qt::AlignLeft);
     layout->setSizeConstraint(QLayout::SetFixedSize);
     cWidget->setLayout(layout);
     cWidget->setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
 
+    QString btnstyle = "QPushButton { background: rgba(243,134,48,100); color:rgba(243,134,48);} QPushButton:disabled{background: rgba(0,0,0,50)}";
+    QFont btnfont("Times",10);
+    int btnHt=30,startidx=0;
+
+    beginBtn = new QPushButton(cWidget);
+    beginBtn->setStyleSheet(btnstyle);
+    beginBtn->setFixedHeight(btnHt);
+    beginBtn->setText("Begin");
+    beginBtn->setFont(btnfont);
+    beginBtn->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
+    layout->addWidget(beginBtn,1,startidx++,Qt::AlignLeft);
     startTag = new QPushButton(cWidget);
     startTag->setStyleSheet(btnstyle);
-    startTag->setFixedHeight(50);
+    startTag->setFixedHeight(btnHt);
     startTag->setText("Start Tagging");
-    startTag->setFont(QFont("Times",20));
+    startTag->setFont(btnfont);
     startTag->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
     startTag->setShortcut(QKeySequence(" "));
-    layout->addWidget(startTag,1,0,Qt::AlignLeft);
+    layout->addWidget(startTag,1,startidx++,Qt::AlignLeft);
     addTag = new QPushButton(cWidget);
     addTag->setStyleSheet(btnstyle);
-    addTag->setFixedHeight(50);
+    addTag->setFixedHeight(btnHt);
     addTag->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
-    addTag->setFont(QFont("Times",20));
+    addTag->setFont(btnfont);
     addTag->setText("Add");
     addTag->setShortcut(QKeySequence("A"));
-    layout->addWidget(addTag,1,1,Qt::AlignLeft);
+    layout->addWidget(addTag,1,startidx++,Qt::AlignLeft);
     transTag = new QPushButton(cWidget);
     transTag->setStyleSheet(btnstyle);
-    transTag->setFixedHeight(50);
+    transTag->setFixedHeight(btnHt);
     transTag->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
-    transTag->setFont(QFont("Times",20));
+    transTag->setFont(btnfont);
     transTag->setText("Transfer");
     transTag->setShortcut(QKeySequence("A"));
-    layout->addWidget(transTag,1,2,Qt::AlignLeft);
+    layout->addWidget(transTag,1,startidx++,Qt::AlignLeft);
     finishTag = new QPushButton(cWidget);
     finishTag->setStyleSheet(btnstyle);
-    finishTag->setFixedHeight(50);
+    finishTag->setFixedHeight(btnHt);
     finishTag->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
     finishTag->setText("Finish Tagging");
-    finishTag->setFont(QFont("Times",20));
-    layout->addWidget(finishTag,1,3,Qt::AlignLeft);
+    finishTag->setFont(btnfont);
+    layout->addWidget(finishTag,1,startidx++,Qt::AlignLeft);
     editTag = new QPushButton(cWidget);
     editTag->setStyleSheet(btnstyle);
-    editTag->setFixedHeight(50);
+    editTag->setFixedHeight(btnHt);
     editTag->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
     editTag->setText("Pause&Edit");
-    editTag->setFont(QFont("Times",20));
-    layout->addWidget(editTag,1,4,Qt::AlignLeft);
+    editTag->setFont(btnfont);
+    layout->addWidget(editTag,1,startidx++,Qt::AlignLeft);
     resumeTag = new QPushButton(cWidget);
     resumeTag->setStyleSheet(btnstyle);
-    resumeTag->setFixedHeight(50);
+    resumeTag->setFixedHeight(btnHt);
     resumeTag->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Fixed);
     resumeTag->setText("Resume");
-    resumeTag->setFont(QFont("Times",20));
-    layout->addWidget(resumeTag,1,5,Qt::AlignLeft);
+    resumeTag->setFont(btnfont);
+    layout->addWidget(resumeTag,1,startidx++,Qt::AlignLeft);
 }
 void MainWindow::makeConns()
 {
@@ -106,7 +117,9 @@ void MainWindow::gviewClicked(QGraphicsSceneMouseEvent * event)
     QString fileName = QFileDialog::getOpenFileName(this,tr("Open vid"), "/Users/xcy/Documents/CVProject/data/Street", tr("Vid Files (*.avi *.mp4 *.mkv *.mts)"));
     //QString fileName="C:/Users/xcy/Documents/CVProject/data/label_company/200412.avi";
     if(!fileName.isEmpty())
+    {
         streamThd->streamStart(fileName.toStdString());
+    }
 }
 
 void MainWindow::initUI()
@@ -129,7 +142,7 @@ void MainWindow::initUI()
     refview->setScene(refscene);
     //setMinimumSize(gview->width()+10,gview->height()+20);
     connect(streamThd,SIGNAL(initBBox()),trkscene,SLOT(initBBox()));//,Qt::BlockingQueuedConnection);
-
+    connect(beginBtn,SIGNAL(clicked()),this,SLOT(beginTracking()));
     connect(startTag,SIGNAL(clicked()),this,SLOT(startTagging()));
     connect(finishTag,SIGNAL(clicked()),this,SLOT(finishTagging()));
     connect(addTag,SIGNAL(clicked()),this,SLOT(addATag()));
@@ -137,11 +150,22 @@ void MainWindow::initUI()
     connect(editTag,SIGNAL(clicked()),this,SLOT(pauseEdit()));
     connect(resumeTag,SIGNAL(clicked()),this,SLOT(resume()));
 
+    startTag->setEnabled(false);
     finishTag->setEnabled(false);
     addTag->setEnabled(false);
     transTag->setEnabled(false);
     editTag->setEnabled(false);
     resumeTag->setEnabled(false);
+    beginTracking();
+}
+void MainWindow::beginTracking()
+{
+ if(streamThd!=NULL)
+ {
+    streamThd->beginTracking();
+    beginBtn->setEnabled(false);
+    startTag->setEnabled(true);
+ }
 }
 void MainWindow::startTagging()
 {
@@ -210,3 +234,4 @@ void MainWindow::resume()
         editTag->setEnabled(true);
     }
 }
+

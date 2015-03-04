@@ -22,6 +22,7 @@ StreamThread::StreamThread(QObject *parent) : QThread(parent)
     pause = false;
     gt_N=-1;
     gtInited=false;
+    isTracking=false;
     trkscene=NULL;
 }
 StreamThread::~StreamThread()
@@ -81,6 +82,11 @@ bool StreamThread::init()
     bbxft=NULL;
     return cap.isOpened();
 }
+void StreamThread::beginTracking()
+{
+    tracker->selfinit(gray.data);
+    isTracking=true;
+}
 void StreamThread::updateItems()
 {
     mutex.lock();
@@ -134,6 +140,8 @@ void StreamThread::initBB()
     targetBB.updateAFrame(bbVec.data());
     bbxft=new int[gt_N*nFeatures];
     tracker->initBB(targetBB,dlyVec,gt_N,delay);
+    dirVec=std::vector<REAL>(gt_N*2);
+    memcpy(dirVec.data(),tracker->dirVec.data(),gt_N*2*sizeof(REAL));
     emit initBBox();
     gtInited=true;
 }
@@ -195,8 +203,11 @@ void StreamThread::streaming()
                 graybuff->updateAFrame(gray.data);
                 frameptr=framebuff->cur_frame_ptr;
                 delayedFrameptr=framebuff->headptr;
-                tracker->updateAframe(gray.data,frameidx);
-                updateItems();
+                if(isTracking)
+                {
+                    tracker->updateAframe(gray.data,frameidx);
+                    updateItems();
+                }
                 /*
                 if(frameidx>50)
                 {
